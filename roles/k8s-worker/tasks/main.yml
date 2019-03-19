@@ -1,0 +1,13 @@
+---
+# tasks file for k8s-worker
+
+- name: Reset cluster
+  become: yes
+  become_user: devops
+  shell: sudo kubeadm reset --force
+
+- name: Join to cluster
+  become: yes
+  become_user: devops
+  shell: sudo bash /vagrant/join_cluster
+

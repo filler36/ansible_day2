@@ -1,0 +1,68 @@
+---
+# tasks file for k8s-master
+
+- name: Reset cluster
+  become: yes
+  become_user: devops
+  shell: sudo kubeadm reset --force
+
+- name: Initializing Kubernetes cluster
+  shell: |
+   sudo kubeadm init --pod-network-cidr 10.244.0.0/16 --apiserver-advertise-address 192.168.56.100
+  become: yes
+  become_user: devops
+
+- name: Copying required files
+  become: yes
+  become_user: devops
+  shell: |
+   mkdir -p $HOME/.kube
+   sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+   sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+- name: Install Network Add-on
+  become: yes
+  become_user: devops
+  shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
+
+- name: Patch flannel
+  become: yes
+  become_user: devops
+  shell: |
+   kubectl patch daemonsets kube-flannel-ds-amd64 -n kube-system --patch='{"spec":{"template":{"spec":{"containers":[{"name": "kube-flannel", "args": ["--ip-masq", "--kube-subnet-mgr", "--iface='${IPETHX}'"]}]}}}}'
+
+- name: Install Dashboard
+  become: yes
+  become_user: devops
+  shell: kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
+
+- name: Patch dashboard
+  become: yes
+  become_user: devops
+  shell: |
+   kubectl patch svc -n kube-system kubernetes-dashboard --patch='{"metadata": {"labels": {"kubernetes.io/cluster-service": "true"}}}'
+
+- name: Copy service account
+  become: yes
+  copy:
+    src: service_account.yml
+    dest: /home/devops
+
+- name: Apply service account
+  become: yes
+  become_user: devops
+  shell: kubectl apply -f /home/devops/service_account.yml
+
+- name: Copy admin.conf to /vagrant
+  become: yes
+  command: cp /etc/kubernetes/admin.conf /vagrant
+
+- name: Save join token
+  become: yes
+  become_user: devops
+  shell: kubeadm token create --print-join-command > $HOME/join_cluster
+
+- name: Copy join_cluster to /vagrant
+  become: yes
+  command: cp /home/devops/join_cluster /vagrant/
+

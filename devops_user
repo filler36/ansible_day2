@@ -1,0 +1,38 @@
+- hosts: all
+
+  tasks:
+  - name: Creating user devops
+    become: yes
+    user:
+      name: devops
+      password: $1$xxx$8x.Wv.ncJT3VkVw.YnXpE0
+
+  - name: Set authorized key taken from file
+    become: yes
+    authorized_key:
+      user: devops
+      state: present
+      key: "{{ lookup('file', '/home/student/ansible/day2/devops.pem.pub') }}"
+
+  - name: Make sure we have a 'wheel' group
+    group:
+      name: wheel
+      state: present
+
+  - name: Allow 'wheel' group to have passwordless sudo
+    become: yes
+    lineinfile:
+      dest: /etc/sudoers
+      state: present
+      regexp: '^%wheel'
+      line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+      validate: visudo -cf %s
+
+  - name: Add sudoers users to wheel group
+    become: yes
+    user:
+      name: devops
+      groups: wheel
+      append: yes
+
+#ansible-playbook devops_user -i inventory -e ansible_user=vagrant -k

@@ -1,0 +1,29 @@
+- hosts: all
+  name: Main playbook
+  become: yes
+
+  pre_tasks:
+  - name: Pre_task
+    debug:
+      msg: "Provisioning started!"
+
+  roles:
+  - devops_user
+  - common
+  - docker
+  - k8s-base
+
+- hosts: masters
+  roles:
+  - k8s-master
+
+- hosts: workers
+  roles:
+  - k8s-worker
+
+- hosts: masters
+  post_tasks:
+  - name: Set role worker
+    become: yes
+    become_user: devops
+    shell: kubectl label node worker-node node-role.kubernetes.io/worker=worker

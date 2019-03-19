@@ -1,0 +1,83 @@
+---
+# tasks file for k8s-base
+
+- name: Disabling Swap on all nodes
+  become: yes
+  shell: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- name: Removing Swap entries in /etc/fstab
+  become: yes
+  mount:
+    name: swap
+    fstype: swap
+    state: absent
+
+- name: Coping repository file for Kubernetes
+  become: yes
+  copy:
+    src: kubernetes.repo
+    dest: /etc/yum.repos.d/
+
+- name: Installing required packages
+  become: yes
+  yum:
+    name:
+      - epel-release
+      - kubelet
+      - kubeadm
+      - kubectl
+      - wget
+      - ntp
+      - jq
+      - net-tools
+      - bind-utils
+      - moreutils
+    disable_excludes: kubernetes
+    state: present
+
+- name: Starting and Enabling NTP daemon
+  become: yes
+  systemd:
+    name: ntpd
+    state: started
+    enabled: yes
+
+- name: Starting and Enabling Kubelet daemon
+  become: yes
+  systemd:
+    name: kubelet
+    state: started
+    enabled: yes
+
+- name: Disable SELinux
+  selinux:
+    state: disabled
+  
+- name: modprobe
+  command: modprobe br_netfilter
+  changed_when: no
+
+- name: Add netbridge config ip6
+  lineinfile:
+    path: /etc/sysctl.d/k8s.conf
+    line: 'net.bridge.bridge-nf-call-ip6tables = 1'
+    state: present
+    create: yes
+  changed_when: no
+
+- name: Add netbridge config ip4
+  lineinfile:
+    path: /etc/sysctl.d/k8s.conf
+    line: 'net.bridge.bridge-nf-call-iptables = 1'
+    state: present
+    create: yes
+
+- name: update sysctl
+  command: sysctl --system
+  changed_when: no
+
+
+- debug: msg='{{ hostvars['worker1']['ansible_host'] }}'
+- debug: msg='{{ hostvars['master1']['ansible_host'] }}'
+

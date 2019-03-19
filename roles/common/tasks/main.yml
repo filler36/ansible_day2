@@ -1,0 +1,12 @@
+---
+# tasks file for common
+
+- name: Update all packages
+  become: yes
+  yum: name=* state=latest
+
+- name: Ensure directory for ansible facts exists
+  file: state=directory recurse=yes path=/etc/ansible/facts.d
+  become: true
+
+- debug: msg='{{ hostvars['worker1']['ansible_user'] }}'
