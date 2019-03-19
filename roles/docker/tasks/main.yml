@@ -28,7 +28,11 @@
   package:
     name: docker-ce
     state: latest
+  changed_when: yes
   notify: docker_start
+
+- name: Flush handlers
+  meta: flush_handlers
 
 - name: Copy daemon.json
   become: yes
